@@ -1,6 +1,6 @@
 using MecHom
 using Test
-
+using CUDA
 
 function generate_micro(N1, N2, N3)
     phases = ones(Int32, N1, N2, N3)
@@ -91,7 +91,7 @@ end
 
 
 
-
+if CUDA.has_cuda() && CUDA.functional()
 @testset "GPU  FixedPoint & Real" begin
     mat1 = IE(E=4.0, nu=0.4)
     mat2 = IE(E=80.0, nu=0.2)
@@ -157,4 +157,8 @@ end
     material_list = [mat1, mat4]
     @test solverGPU(micro, material_list, Strain, loading_list, time_list, precision; c0=:ITE2DStrain, verbose_step=true) !== nothing
 
+end
+
+else
+    println("CUDA not available.")
 end
