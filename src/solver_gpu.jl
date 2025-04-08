@@ -165,8 +165,19 @@ function solverGPU(
 
 
         if keep_fields
-            epsf[:, :, :, :, loading_index] = zeros(FT, length(loading_list), 6, size(phases)...)
-            sigf[:, :, :, :, loading_index] = zeros(FT, length(loading_list), 6, size(phases)...)
+            epsf[1, :, :, :, loading_index] .= Array(eps1)
+            epsf[2, :, :, :, loading_index] .= Array(eps2)
+            epsf[3, :, :, :, loading_index] .= Array(eps3)
+            epsf[4, :, :, :, loading_index] .= Array(eps4)
+            epsf[5, :, :, :, loading_index] .= Array(eps5)
+            epsf[6, :, :, :, loading_index] .= Array(eps6)
+
+            sigf[1, :, :, :, loading_index] .= Array(sig1)
+            sigf[2, :, :, :, loading_index] .= Array(sig2)
+            sigf[3, :, :, :, loading_index] .= Array(sig3)
+            sigf[4, :, :, :, loading_index] .= Array(sig4)
+            sigf[5, :, :, :, loading_index] .= Array(sig5)
+            sigf[6, :, :, :, loading_index] .= Array(sig6)
         end
 
         if save_fields

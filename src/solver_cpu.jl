@@ -97,8 +97,8 @@ function solver(
         update_hist!(step_hist, loading_index, E=EPS, S=SIG, ES=ES, equi=err_equi, comp=err_comp, load=err_load, it=it)
 
         if keep_fields
-            epsf[:, :, :, :, loading_index] = zeros(FT, length(loading_list), 6, size(phases)...)
-            sigf[:, :, :, :, loading_index] = zeros(FT, length(loading_list), 6, size(phases)...)
+            epsf[:, :, :, :, loading_index] .= eps
+            sigf[:, :, :, :, loading_index] .= sig
         end
 
 
