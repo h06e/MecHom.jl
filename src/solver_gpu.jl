@@ -316,12 +316,12 @@ function polarization_step_solver_gpu!(r, eps1, eps2, eps3, eps4, eps5, eps6, si
         sb5 = CUDA.zeros(FT, size(eps1)...)
         sb6 = CUDA.zeros(FT, size(eps1)...)
 
-        CUDA.@. eps1 += loading[1] - EPS[1]
-        CUDA.@. eps2 += loading[2] - EPS[2]
-        CUDA.@. eps3 += loading[3] - EPS[3]
-        CUDA.@. eps4 += loading[4] - EPS[4]
-        CUDA.@. eps5 += loading[5] - EPS[5]
-        CUDA.@. eps6 += loading[6] - EPS[6]
+        CUDA.@. eps1 = loading[1] #- EPS[1]
+        CUDA.@. eps2 = loading[2] #- EPS[2]
+        CUDA.@. eps3 = loading[3] #- EPS[3]
+        CUDA.@. eps4 = loading[4] #- EPS[4]
+        CUDA.@. eps5 = loading[5] #- EPS[5]
+        CUDA.@. eps6 = loading[6] #- EPS[6]
         n_blocks, n_threads = get_blocks_threads(eps1)
         @cuda blocks = n_blocks threads = n_threads rdcgpu!(sig1, sig2, sig3, sig4, sig5, sig6, eps1, eps2, eps3, eps4, eps5, eps6, phases_gpu, material_list_gpu)
 
