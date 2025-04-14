@@ -8,7 +8,12 @@ function chose_c0(material_list::Vector{<:Material},scheme::Type{<:Scheme})
             return chose_c0(material_list, :iso_arit_lambda0)
         end
     else
-        @error "No supported choice for c0 with Polarization scheme for now"
+        if material_list isa Vector{<:IE}
+            @error "No supported choice for c0 with Polarization scheme for now"
+        elseif material_list isa Vector{<:Elastic}
+            return chose_c0(material_list, :iso_geom_lambda0)
+        end
+
     end
 end
 
@@ -69,6 +74,18 @@ function chose_c0(material_list::Vector{<:Material},method::Symbol)
 
         end
         return IE(lambda = 0., mu = 0.5 * (eigval_min + eigval_max))
+
+    elseif method == :iso_geom_lambda0
+        
+        eigval_min, eigval_max = Inf, -Inf
+        for material in material_list
+            vps = eigvals_mat(IE2ITE(material))
+
+            eigval_min = min(eigval_min, minimum(abs.(vps)))
+            eigval_max = max(eigval_max, maximum(abs.(vps)))
+
+        end
+        return IE(lambda = 0., mu = sqrt((eigval_min * eigval_max)) )
     else
         @error "No method called $method for chosing C0" 
         throw(ArgumentError)

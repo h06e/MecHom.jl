@@ -147,7 +147,7 @@ function solverGPU(
 
         keep_it_info ? (fft_hist = Hist2{FT}(Nit_max)) : (fft_hist = nothing)
 
-        t = CUDA.@elapsed it, err_equi, err_comp, err_load = step_solver!(r, eps1, eps2, eps3, eps4, eps5, eps6, sig1, sig2, sig3, sig4, sig5, sig6, EPS, SIG, phases_gpu, material_list_gpu, tols, loading_type, loading, c0, P, Pinv, xi1, xi2, xi3, tau1, tau2, tau3, tau4, tau5, tau6, Nit_max, verbose_fft, fft_hist)
+        t = CUDA.@elapsed it, err_equi, err_comp, err_load = step_solver!(r, eps1, eps2, eps3, eps4, eps5, eps6, sig1, sig2, sig3, sig4, sig5, sig6, EPS, SIG, phases_gpu, material_list_gpu, tols, loading_type, loading, c0, P, Pinv, xi1, xi2, xi3, tau1, tau2, tau3, tau4, tau5, tau6, Nit_max, verbose_fft, fft_hist,material_list,FT)
 
 
         verbose_step ? println("step time $t") : nothing
@@ -200,7 +200,7 @@ end
 
 
 
-function fixed_point_step_solver_gpu!(r, eps1, eps2, eps3, eps4, eps5, eps6, sig1, sig2, sig3, sig4, sig5, sig6, EPS, SIG, phases_gpu, material_list_gpu, tols, loading_type, loading, c0, P, Pinv, xi1, xi2, xi3, tau1, tau2, tau3, tau4, tau5, tau6, Nit_max_green_operator_inv, verbose_fft, fft_hist)
+function fixed_point_step_solver_gpu!(r, eps1, eps2, eps3, eps4, eps5, eps6, sig1, sig2, sig3, sig4, sig5, sig6, EPS, SIG, phases_gpu, material_list_gpu, tols, loading_type, loading, c0, P, Pinv, xi1, xi2, xi3, tau1, tau2, tau3, tau4, tau5, tau6, Nit_max_green_operator_inv, verbose_fft, fft_hist,material_list,FT)
 
     if loading_type == Strain
 
@@ -285,6 +285,130 @@ function fixed_point_step_solver_gpu!(r, eps1, eps2, eps3, eps4, eps5, eps6, sig
         else
             return it, err_equi, 0.0, err_load
         end
+    end
+end
+
+
+
+
+
+function polarization_step_solver_gpu!(r, eps1, eps2, eps3, eps4, eps5, eps6, sig1, sig2, sig3, sig4, sig5, sig6, EPS, SIG, phases_gpu, material_list_gpu, tols, loading_type, loading, c0, P, Pinv, xi1, xi2, xi3, tau1, tau2, tau3, tau4, tau5, tau6, Nit_max_green_operator_inv, verbose_fft, fft_hist,material_list,FT)
+
+    if loading_type == Strain
+
+        alpha = 2.0
+        beta = 2.0
+
+        c0_list = [IE2ITE(c0) |> cu for m in material_list] |> cu
+        cpc0 = [(m+c0) |> cu for m in material_list]|> cu
+        
+        sa1 = CUDA.zeros(FT, size(eps1)...)
+        sa2 = CUDA.zeros(FT, size(eps1)...)
+        sa3 = CUDA.zeros(FT, size(eps1)...)
+        sa4 = CUDA.zeros(FT, size(eps1)...)
+        sa5 = CUDA.zeros(FT, size(eps1)...)
+        sa6 = CUDA.zeros(FT, size(eps1)...)
+
+        sb1 = CUDA.zeros(FT, size(eps1)...)
+        sb2 = CUDA.zeros(FT, size(eps1)...)
+        sb3 = CUDA.zeros(FT, size(eps1)...)
+        sb4 = CUDA.zeros(FT, size(eps1)...)
+        sb5 = CUDA.zeros(FT, size(eps1)...)
+        sb6 = CUDA.zeros(FT, size(eps1)...)
+
+        CUDA.@. eps1 += loading[1] - EPS[1]
+        CUDA.@. eps2 += loading[2] - EPS[2]
+        CUDA.@. eps3 += loading[3] - EPS[3]
+        CUDA.@. eps4 += loading[4] - EPS[4]
+        CUDA.@. eps5 += loading[5] - EPS[5]
+        CUDA.@. eps6 += loading[6] - EPS[6]
+        n_blocks, n_threads = get_blocks_threads(eps1)
+        @cuda blocks = n_blocks threads = n_threads rdcgpu!(sig1, sig2, sig3, sig4, sig5, sig6, eps1, eps2, eps3, eps4, eps5, eps6, phases_gpu, material_list_gpu)
+
+        tol_equi = tols[1]
+        tol_load = tols[3]
+        err_equi = 1e9
+        err_load = 1e9
+        it = 0
+
+        while (err_equi > tol_equi || err_load > tol_load) && it < Nit_max_green_operator_inv
+            it += 1
+
+            @cuda blocks = n_blocks threads = n_threads rdcgpu!(sa1, sa2, sa3, sa4, sa5, sa6, eps1, eps2, eps3, eps4, eps5, eps6, phases_gpu, c0_list) 
+            
+            
+            
+            CUDA.@. sb1 = alpha * sig1 - beta * sa1
+            CUDA.@. sb2 = alpha * sig2 - beta * sa2
+            CUDA.@. sb3 = alpha * sig3 - beta * sa3
+            CUDA.@. sb4 = alpha * sig4 - beta * sa4
+            CUDA.@. sb5 = alpha * sig5 - beta * sa5
+            CUDA.@. sb6 = alpha * sig6 - beta * sa6
+            
+            CUDA.@. sa1 = sig1 + (1-beta) * sa1 
+            CUDA.@. sa2 = sig2 + (1-beta) * sa2 
+            CUDA.@. sa3 = sig3 + (1-beta) * sa3 
+            CUDA.@. sa4 = sig4 + (1-beta) * sa4 
+            CUDA.@. sa5 = sig5 + (1-beta) * sa5 
+            CUDA.@. sa6 = sig6 + (1-beta) * sa6 
+
+            gamma0!(P, Pinv, xi1, xi2, xi3, tau1, tau2, tau3, tau4, tau5, tau6, sb1, sb2, sb3, sb4, sb5, sb6, c0, [0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
+
+            CUDA.@. sb1 += beta * loading[1]
+            CUDA.@. sb2 += beta * loading[2]
+            CUDA.@. sb3 += beta * loading[3]
+            CUDA.@. sb4 += beta * loading[4]
+            CUDA.@. sb5 += beta * loading[5]
+            CUDA.@. sb6 += beta * loading[6]
+
+            @cuda blocks = n_blocks threads = n_threads rdcgpu!(sig1, sig2, sig3, sig4, sig5, sig6, sb1, sb2, sb3, sb4, sb5, sb6, phases_gpu, c0_list)
+
+            CUDA.@. sig1 += sa1 
+            CUDA.@. sig2 += sa2 
+            CUDA.@. sig3 += sa3 
+            CUDA.@. sig4 += sa4 
+            CUDA.@. sig5 += sa5 
+            CUDA.@. sig6 += sa6 
+
+
+            @cuda blocks = n_blocks threads = n_threads rdcinvgpu!(sa1, sa2, sa3, sa4, sa5, sa6, sig1, sig2, sig3, sig4, sig5, sig6, phases_gpu, cpc0)
+
+            CUDA.@. sb1 = eps1 - sa1 
+            CUDA.@. sb2 = eps2 - sa2 
+            CUDA.@. sb3 = eps3 - sa3 
+            CUDA.@. sb4 = eps4 - sa4 
+            CUDA.@. sb5 = eps5 - sa5 
+            CUDA.@. sb6 = eps6 - sa6 
+
+            err_equi = Float64(eq_error(r, sb1, sb2, sb3, sb4, sb5, sb6))
+
+            CUDA.@. eps1 = sa1
+            CUDA.@. eps2 = sa2
+            CUDA.@. eps3 = sa3
+            CUDA.@. eps4 = sa4
+            CUDA.@. eps5 = sa5
+            CUDA.@. eps6 = sa6
+
+            
+            @cuda blocks = n_blocks threads = n_threads rdcgpu!(sig1, sig2, sig3, sig4, sig5, sig6, eps1, eps2, eps3, eps4, eps5, eps6, phases_gpu, material_list_gpu)
+
+            EPS .= means_gpu(eps1, eps2, eps3, eps4, eps5, eps6)
+            SIG .= means_gpu(sig1, sig2, sig3, sig4, sig5, sig6)
+
+            err_load = Float64(abs(sum((EPS .- loading) .^ 2 .* [1.0, 1.0, 1.0, 2.0, 2.0, 2.0])))
+
+        
+            isnothing(fft_hist) ? nothing : (update_hist!(fft_hist, it, E=EPS, S=SIG, equi=err_equi, load=err_load))
+            verbose_fft ? print_iteration(it, EPS, SIG, err_equi, 0.0, err_load, tols) : nothing
+        end
+        if isnan(err_equi)
+            throw(ErrorException("err_equi is NaN – check algorithm stability or parameter choices (e.g., c0)."))
+        else
+            return it, err_equi, 0.0, err_load
+        end
+    elseif loading_type == Stress
+        @error "Polarization & Stress control is not implemented in MecHom yet."
+        return
     end
 end
 

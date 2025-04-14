@@ -64,6 +64,17 @@ function IE2ITE(mat::IE)
 end
 
 
+# function Base.:+(m3::ITE{T}, m4::ITE{T}) where T
+#     ITE(k=m4.k + m3.k, l=m4.l + m3.l, m=m4.m + m3.m, n=m4.n + m3.n, p=m4.p + m3.p)
+# end
+
+function Base.:+(m1::Elastic, m2::Elastic) where T
+    m3 = IE2ITE(m1)
+    m4 = IE2ITE(m2)
+    ITE(k=m4.k + m3.k, l=m4.l + m3.l, m=m4.m + m3.m, n=m4.n + m3.n, p=m4.p + m3.p)
+end
+
+
 #**************************************************************
 
 struct ITE{T<:Union{Float64,ComplexF64}} <: Elastic
