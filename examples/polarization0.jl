@@ -63,7 +63,31 @@ function main()
 end
 
 
+function test0()
+    fibre = ITE(El=230.0, Et=15.0, mul=15.0, nul=0.2, mut=7.0)
+    matrix0 = IE(E=4.0, nu=0.4)
+    matrix = IE(kappa=matrix0.kappa, mu = matrix0.mu/100)
+
+    material_list = [matrix, fibre]
+    info, micro = MecHom.Micro.gen_2d_random_disks(50, 0.5, 0.1, 2048; seed=123)
 
 
+    loading_list = [
+        [1.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+        [0.0, 1.0, 0.0, 0.0, 0.0, 0.0],
+        [0.0, 0.0, 1.0, 0.0, 0.0, 0.0],
+        [0.0, 0.0, 0.0, 1.0, 0.0, 0.0],
+        [0.0, 0.0, 0.0, 0.0, 1.0, 0.0],
+        [0.0, 0.0, 0.0, 0.0, 0.0, 1.0],
+    ]
+    time_list = [ComplexF64(i) for i in 1:6]
+    tols = [1e-7, 0.0, 1e-4]
 
-main()
+    simple_out = solverGPU(micro, material_list, Strain, loading_list, time_list, tols; precision=:simple, keep_fields=false, verbose_step=true, verbose_fft=true, scheme=MecHom.Polarization)
+
+
+end
+
+
+# main()
+test0()

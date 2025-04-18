@@ -1,4 +1,5 @@
 using Parameters
+using CUDA
 using Adapt
 
 export Material
@@ -366,29 +367,39 @@ end
 #**********************************************************************************
 
 
-function rdcgpu!(sig1, sig2, sig3, sig4, sig5, sig6, eps1, eps2, eps3, eps4, eps5, eps6, phases, material_list)
+function rdcgpu!(sig, eps, phases, material_list, cartesian, NNN)
     i = threadIdx().x + (blockIdx().x - 1) * blockDim().x
 
-    @inbounds if i <= length(eps1)
+    @inbounds if i <= NNN
+
+        i1 = cartesian[i][1]
+        i2 = cartesian[i][2]
+        i3 = cartesian[i][3]
+
         mat = material_list[phases[i]]
 
-        sig1[i] = (mat.k + mat.m) * eps1[i] + (mat.k - mat.m) * eps2[i] + mat.l * eps3[i]
-        sig2[i] = (mat.k - mat.m) * eps1[i] + (mat.k + mat.m) * eps2[i] + mat.l * eps3[i]
-        sig3[i] = mat.l * eps1[i] + mat.l * eps2[i] + mat.n * eps3[i]
-        sig4[i] = 2 * mat.p * eps4[i]
-        sig5[i] = 2 * mat.p * eps5[i]
-        sig6[i] = 2 * mat.m * eps6[i]
+        sig[i1,i2,i3,1] = (mat.k + mat.m) * eps[i1,i2,i3,1] + (mat.k - mat.m) * eps[i1,i2,i3,2] + mat.l * eps[i1,i2,i3,3]
+        sig[i1,i2,i3,2] = (mat.k - mat.m) * eps[i1,i2,i3,1] + (mat.k + mat.m) * eps[i1,i2,i3,2] + mat.l * eps[i1,i2,i3,3]
+        sig[i1,i2,i3,3] = mat.l * eps[i1,i2,i3,1] + mat.l * eps[i1,i2,i3,2] + mat.n * eps[i1,i2,i3,3]
+        sig[i1,i2,i3,4] = 2 * mat.p * eps[i1,i2,i3,4]
+        sig[i1,i2,i3,5] = 2 * mat.p * eps[i1,i2,i3,5]
+        sig[i1,i2,i3,6] = 2 * mat.m * eps[i1,i2,i3,6]
 
     end
     return nothing
 end
 
 
-function rdcinvgpu!(eps1, eps2, eps3, eps4, eps5, eps6, sig1, sig2, sig3, sig4, sig5, sig6, phases, material_list)
+function rdcinvgpu!(eps, sig, phases, material_list, cartesian, NNN)
     i = threadIdx().x + (blockIdx().x - 1) * blockDim().x
 
-    @inbounds if i <= length(eps1)
+    @inbounds if i <= NNN
         mat = material_list[phases[i]]
+
+        i1 = cartesian[i][1]
+        i2 = cartesian[i][2]
+        i3 = cartesian[i][3]
+
         s11 = 1 / mat.Et
         s33 = 1 / mat.El
         s12 = -mat.nut / mat.Et
@@ -396,12 +407,12 @@ function rdcinvgpu!(eps1, eps2, eps3, eps4, eps5, eps6, sig1, sig2, sig3, sig4, 
         s44 = 1.0 / 2.0 / mat.mul
         s66 = 1.0 / 2.0 / mat.mut
 
-        eps1[i] = s11 * sig1[i] + s12 * sig2[i] + s13 * sig3[i]
-        eps2[i] = s12 * sig1[i] + s11 * sig2[i] + s13 * sig3[i]
-        eps3[i] = s13 * sig1[i] + s13 * sig2[i] + s33 * sig3[i]
-        eps4[i] = s44 * sig4[i]
-        eps5[i] = s44 * sig5[i]
-        eps6[i] = s66 * sig6[i]
+        eps[i1,i2,i3,1] = s11 * sig[i1,i2,i3,1] + s12 * sig[i1,i2,i3,2] + s13 * sig[i1,i2,i3,3]
+        eps[i1,i2,i3,2] = s12 * sig[i1,i2,i3,1] + s11 * sig[i1,i2,i3,2] + s13 * sig[i1,i2,i3,3]
+        eps[i1,i2,i3,3] = s13 * sig[i1,i2,i3,1] + s13 * sig[i1,i2,i3,2] + s33 * sig[i1,i2,i3,3]
+        eps[i1,i2,i3,4] = s44 * sig[i1,i2,i3,4]
+        eps[i1,i2,i3,5] = s44 * sig[i1,i2,i3,5]
+        eps[i1,i2,i3,6] = s66 * sig[i1,i2,i3,6]
     end
     return nothing
 end

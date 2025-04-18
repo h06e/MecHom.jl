@@ -1,5 +1,8 @@
 using MecHom
 using Profile
+using PyPlot
+
+
 function generate_micro(N1, N2, N3)
     phases = ones(Int32, N1, N2, N3)
     r2 = (N1 / 4)^2
@@ -30,16 +33,18 @@ function main()
     # N1, N2, N3 = 128, 128, 128
     # micro = generate_micro(N1, N2, N3)
 
-    info, micro = MecHom.Micro.gen_2d_random_disks(30, 0.5, 0.1, 1024; seed=123)
+    info, micro = MecHom.Micro.gen_2d_random_disks(30, 0.5, 0.2, 512; seed=123)
 
-    loading_list = [[1.0,0.,0.,0.,0.,0.], [0.,0.,1.,0.,0.,0.]]
-    time_list = [ComplexF64(i) for i in eachindex(loading_list)]
+    loading_list = [[1.0,0.,0.,0.,0.,0.],[1.1,0.,0.,0.,0.,0.]]
+    time_list = [Float64(i) for i in eachindex(loading_list)]
 
     tols = [1e-6, 1e-6, 1e-4]
 
-
-    material_list = [mat1, mat4]
+    # micro = zeros(Int32, 512,512,1) .+ Int32(2)
+    # @info "" typeof(micro)
+    material_list = [IE(E=3.5, nu=0.4), ITE(El=279.2, Et=33.1, nul=0.319, nut=0.07, mul=71.0)]
     # material_list = [IE(10.0, 5.0), IE(2.0, 1.0)]
+
 
     # solcpu = solver(
     #     micro,
@@ -53,19 +58,57 @@ function main()
     #     # Nit_max_green_operator_inv=50,
     # )
 
+    # solgpu = solverGPU(
+    #     micro,
+    #     material_list,
+    #     Strain,
+    #     loading_list,
+    #     time_list,
+    #     tols;
+    #     verbose_fft=true,
+    #     verbose_step=true,
+    #     Nit_max=50,
+    #     # c0=:ITE2DStrain
+    # )
+
     solgpu = solverGPU(
         micro,
         material_list,
-        Strain,
+        Stress,
         loading_list,
         time_list,
         tols;
         verbose_fft=false,
         verbose_step=true,
-        # Nit_max_green_operator_inv=50,
-        # c0=:ITE2DStrain
+        Nit_max=500,
+        precision=:simple,
+        green_willot=false,
+        # scheme=Polarization,
+        keep_fields=false
     )
 
+    # solgpu2 = solverGPU(
+    #     micro,
+    #     material_list,
+    #     Strain,
+    #     loading_list,
+    #     time_list,
+    #     tols;
+    #     verbose_fft=false,
+    #     verbose_step=true,
+    #     Nit_max=500,
+    #     precision=:simple,
+    #     green_willot=true,
+    #     keep_fields=true
+    # )
+
+    # pygui(true)
+    # plt.figure()
+    # plt.subplot(121)
+    # plt.imshow(solgpu[:eps][1,:,:,:,1])
+    # plt.subplot(122)
+    # plt.imshow(solgpu2[:eps][1,:,:,:,1])
+    # plt.show()
 
 
     # solver(

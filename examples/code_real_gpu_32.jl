@@ -256,12 +256,12 @@ end
 # **********************************************************************************************
 # * Main
 function main()
-    material_list = [IE(10.0, 5.0), IE(2.0, 1.0)]
+    material_list = [IE(100.0, 5.0), IE(2.0, 1.0)]
     c0 = chose_c0(material_list)
 
     N = 128
     N1, N2, N3 = N, N, N
-    # N1, N2, N3 = 1024, 1024, 1
+    N1, N2, N3 = 512, 512, 1
     phases = generate_micro(N1, N2, N3)
 
     # *********
