@@ -354,11 +354,8 @@ end
 
 function gamma0!(P, Pinv, xi1, xi2, xi3, tau, sig, c0, mean, freq_mod)
 
-    tfft1 = CUDA.@elapsed CUDA.CUFFT.mul!(tau, P, sig)
+    CUDA.CUFFT.mul!(tau, P, sig)
 
-
-
-    tgammafft = CUDA.@elapsed begin
     N = size(sig)
     N = N |> cu
     NNN =  N[1]*N[2]*N[3]
@@ -366,6 +363,7 @@ function gamma0!(P, Pinv, xi1, xi2, xi3, tau, sig, c0, mean, freq_mod)
     ntau = size(tau, 1) * size(tau, 2) * size(tau, 3)
     cartesian = CartesianIndices(size(tau[:, :, :, 1]))
     n_blocks, n_threads = get_blocks_threads(ntau)
+
 
     if isnothing(freq_mod)
         if c0 isa IE
@@ -381,8 +379,8 @@ function gamma0!(P, Pinv, xi1, xi2, xi3, tau, sig, c0, mean, freq_mod)
             @cuda blocks = n_blocks threads = n_threads gamma0ITE_kernel!(tau,ntau, xi1, xi2, xi3, N, α, αp, β, γ, γp, cartesian)
         end
     else
-        coef5 = (c0.lambda + c0.mu) / (c0.mu * (c0.lambda + 2.0 * c0.mu))
-        mu0 = c0.mu
+        coef5 = Float32((c0.lambda + c0.mu) / (c0.mu * (c0.lambda + 2.0 * c0.mu)))
+        mu0 = Float32(c0.mu)
 
         @cuda blocks = n_blocks threads = n_threads gamma0IE_willot_kernel!(tau, ntau, freq_mod, N, coef5, mu0, cartesian)
     end
@@ -393,10 +391,9 @@ function gamma0!(P, Pinv, xi1, xi2, xi3, tau, sig, c0, mean, freq_mod)
     CUDA.@allowscalar tau[1, 1, 1, 4] = mean[4] * NNN
     CUDA.@allowscalar tau[1, 1, 1, 5] = mean[5] * NNN
     CUDA.@allowscalar tau[1, 1, 1, 6] = mean[6] * NNN
-    end
+    
 
-    tfft2 = CUDA.@elapsed CUDA.CUFFT.mul!(sig, Pinv, tau)
-    return tfft1, tgammafft, tfft2
+    CUDA.CUFFT.mul!(sig, Pinv, tau)
 end
 
 

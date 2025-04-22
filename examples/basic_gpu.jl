@@ -88,6 +88,14 @@ function main()
     #     keep_it_info=true
     # )
 
+    matrix = material_list[1]
+    fibre = material_list[2]
+
+    @info "" fibre.k fibre.p fibre.m
+    @info "" matrix.kappa matrix.mu
+
+    @info "c0?" 0.5*(fibre.k+matrix.kappa) 0.5*(matrix.mu+fibre.p)
+
     solgpu2 = solverGPU(
         micro,
         material_list,
@@ -95,14 +103,14 @@ function main()
         loading_list,
         time_list,
         tols;
-        verbose_fft=true,
+        verbose_fft=false,
         verbose_step=true,
         Nit_max=500,
         precision=:simple,
         green_willot=true,
         keep_fields=true,
         keep_it_info=true,
-        c0=IE(kappa=70.0, mu=30.0)
+        c0=IE(kappa=100.0, mu=30.0)
     )
 
     # pygui(true)

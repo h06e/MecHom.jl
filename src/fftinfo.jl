@@ -80,53 +80,98 @@ end
 
 
 function modified_frequencied(::Type{T}, p, phases) where {T}
-    N = size(phases)
-    dx, dy, dz = p
+    if T <: Real
+        N = size(phases)
+        dx, dy, dz = p
 
-    T1 = N[1] * dx
-    T2 = N[2] * dy
-    T3 = N[3] * dz
+        T1 = N[1] * dx
+        T2 = N[2] * dy
+        T3 = N[3] * dz
 
-    DF1 = 2 * pi / T1
-    DF2 = 2 * pi / T2
-    DF3 = 2 * pi / T3
+        DF1 = 2 * pi / T1
+        DF2 = 2 * pi / T2
+        DF3 = 2 * pi / T3
 
-    filter_radius = 1.0
+        filter_radius = 1.0
 
-    ros2 = filter_radius / 2
+        ros2 = filter_radius / 2
 
-    FREQ = zeros(T, div(N[1], 2) + 1, N[2], N[3], 3)
+        FREQ = zeros(T, div(N[1], 2) + 1, N[2], N[3], 3)
 
-    x1 = rfftfreq(N[1], 1 / p[1])
-    x2 = fftfreq(N[2], 1 / p[2])
-    x3 = fftfreq(N[3], 1 / p[3])
+        x1 = rfftfreq(N[1], 1 / p[1])
+        x2 = fftfreq(N[2], 1 / p[2])
+        x3 = fftfreq(N[3], 1 / p[3])
 
-    for k in 1:N[3]
-        for j in 1:N[2]
-            for i in 1:div(N[1], 2)+1
+        for k in 1:N[3]
+            for j in 1:N[2]
+                for i in 1:div(N[1], 2)+1
 
 
-                U1 = x1[i] * DF1 
-                U2 = x2[j] * DF2 
-                U3 = x3[k] * DF3 
+                    U1 = x1[i] * DF1 
+                    U2 = x2[j] * DF2 
+                    U3 = x3[k] * DF3 
 
-                FREQ[i, j, k, 1] = (N[1] / (ros2 * T1)) * sin(ros2 * U1 * T1 / N[1]) * cos(ros2 * U2 * T2 / N[2]) * cos(ros2 * U3 * T3 / N[3])
-                FREQ[i, j, k, 2] = (N[2] / (ros2 * T2)) * cos(ros2 * U1 * T1 / N[1]) * sin(ros2 * U2 * T2 / N[2]) * cos(ros2 * U3 * T3 / N[3])
-                FREQ[i, j, k, 3] = (N[3] / (ros2 * T3)) * cos(ros2 * U1 * T1 / N[1]) * cos(ros2 * U2 * T2 / N[2]) * sin(ros2 * U3 * T3 / N[3])
+                    FREQ[i, j, k, 1] = (N[1] / (ros2 * T1)) * sin(ros2 * U1 * T1 / N[1]) * cos(ros2 * U2 * T2 / N[2]) * cos(ros2 * U3 * T3 / N[3])
+                    FREQ[i, j, k, 2] = (N[2] / (ros2 * T2)) * cos(ros2 * U1 * T1 / N[1]) * sin(ros2 * U2 * T2 / N[2]) * cos(ros2 * U3 * T3 / N[3])
+                    FREQ[i, j, k, 3] = (N[3] / (ros2 * T3)) * cos(ros2 * U1 * T1 / N[1]) * cos(ros2 * U2 * T2 / N[2]) * sin(ros2 * U3 * T3 / N[3])
 
-                FREQ[i, j, k, 1] = 2/dx * sin(x1[i]*2*pi/2) * cos(x2[j]*2*pi/2) * cos(x3[k]*2*pi/2)
-                FREQ[i, j, k, 2] = 2/dy * cos(x1[i]*2*pi/2) * sin(x2[j]*2*pi/2) * cos(x3[k]*2*pi/2)
-                FREQ[i, j, k, 3] = 2/dz * cos(x1[i]*2*pi/2) * cos(x2[j]*2*pi/2) * sin(x3[k]*2*pi/2)
-                # FREQ[i,j,k,1] = U1
-                # FREQ[i,j,k,2] = U2
-                # FREQ[i,j,k,3] = U3
+                    # FREQ[i, j, k, 1] = 2/dx * sin(x1[i]*2*pi/2) * cos(x2[j]*2*pi/2) * cos(x3[k]*2*pi/2)
+                    # FREQ[i, j, k, 2] = 2/dy * cos(x1[i]*2*pi/2) * sin(x2[j]*2*pi/2) * cos(x3[k]*2*pi/2)
+                    # FREQ[i, j, k, 3] = 2/dz * cos(x1[i]*2*pi/2) * cos(x2[j]*2*pi/2) * sin(x3[k]*2*pi/2)
+                    # FREQ[i,j,k,1] = U1
+                    # FREQ[i,j,k,2] = U2
+                    # FREQ[i,j,k,3] = U3
+
+                end
             end
         end
-    end
 
-    freq = CUDA.zeros(T, div(N[1], 2) + 1, N[2], N[3], 3)
-    copyto!(freq, FREQ)
-    return freq
+        freq = CUDA.zeros(T, div(N[1], 2) + 1, N[2], N[3], 3)
+        copyto!(freq, FREQ)
+        return freq
+    else
+        N = size(phases)
+        dx, dy, dz = p
+
+        T1 = N[1] * dx
+        T2 = N[2] * dy
+        T3 = N[3] * dz
+
+        DF1 = 2 * pi / T1
+        DF2 = 2 * pi / T2
+        DF3 = 2 * pi / T3
+
+        filter_radius = 1.0
+
+        ros2 = filter_radius / 2
+
+        FREQ = zeros(T, N[1], N[2], N[3], 3)
+
+        x1 = fftfreq(N[1], 1 / p[1])
+        x2 = fftfreq(N[2], 1 / p[2])
+        x3 = fftfreq(N[3], 1 / p[3])
+
+        for k in 1:N[3]
+            for j in 1:N[2]
+                for i in 1:N[1]
+
+                    U1 = x1[i] * DF1 
+                    U2 = x2[j] * DF2 
+                    U3 = x3[k] * DF3 
+
+                    FREQ[i, j, k, 1] = (N[1] / (ros2 * T1)) * sin(ros2 * U1 * T1 / N[1]) * cos(ros2 * U2 * T2 / N[2]) * cos(ros2 * U3 * T3 / N[3])
+                    FREQ[i, j, k, 2] = (N[2] / (ros2 * T2)) * cos(ros2 * U1 * T1 / N[1]) * sin(ros2 * U2 * T2 / N[2]) * cos(ros2 * U3 * T3 / N[3])
+                    FREQ[i, j, k, 3] = (N[3] / (ros2 * T3)) * cos(ros2 * U1 * T1 / N[1]) * cos(ros2 * U2 * T2 / N[2]) * sin(ros2 * U3 * T3 / N[3])
+
+                end
+            end
+        end
+
+        freq = CUDA.zeros(T, N[1], N[2], N[3], 3)
+        copyto!(freq, FREQ)
+
+        return freq
+    end
 end
 
 

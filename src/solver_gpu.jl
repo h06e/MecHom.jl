@@ -91,10 +91,7 @@ function solverGPU(
         throw(ArgumentError("precision keyword must be :double or :simple (default :double)"))
     end
 
-    freq_mod = nothing
-    if green_willot
-        freq_mod = modified_frequencied(FT, p, phases)
-    end
+   
 
     material_list = [IE2ITE(m) for m in material_list]
     if T <: Complex
@@ -109,6 +106,11 @@ function solverGPU(
         sig = CUDA.zeros(FT, size(phases)..., 6)
 
         P, Pinv, xi1, xi2, xi3, tau = init_gpu_realfft(FT,eps, p, phases)
+    end
+
+    freq_mod = nothing
+    if green_willot
+        freq_mod = modified_frequencied(FT, p, phases)
     end
 
     cartesian = CartesianIndices(size(phases))
