@@ -24,7 +24,7 @@ function eq_error(r, sig, cartesian)
     n_blocks, n_threads = get_blocks_threads(nelmt)
     @cuda blocks = n_blocks threads = n_threads eq_error!(r, sig, cartesian, nelmt)
     residu = reduce(+, r)
-    residu = residu / nelmt
+    residu = abs(residu) / nelmt
 end
 
 
