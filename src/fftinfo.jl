@@ -114,9 +114,9 @@ function modified_frequencied(::Type{T}, p, phases) where {T}
                 FREQ[i, j, k, 2] = (N[2] / (ros2 * T2)) * cos(ros2 * U1 * T1 / N[1]) * sin(ros2 * U2 * T2 / N[2]) * cos(ros2 * U3 * T3 / N[3])
                 FREQ[i, j, k, 3] = (N[3] / (ros2 * T3)) * cos(ros2 * U1 * T1 / N[1]) * cos(ros2 * U2 * T2 / N[2]) * sin(ros2 * U3 * T3 / N[3])
 
-                # FREQ[i, j, k, 1] = 2/dx * sin(U1/2) * cos(U2/2) * cos(U3/2)
-                # FREQ[i, j, k, 2] = 2/dy * cos(U1/2) * sin(U2/2) * cos(U3/2)
-                # FREQ[i, j, k, 3] = 2/dz * cos(U1/2) * cos(U2/2) * sin(U3/2)
+                FREQ[i, j, k, 1] = 2/dx * sin(x1[i]*2*pi/2) * cos(x2[j]*2*pi/2) * cos(x3[k]*2*pi/2)
+                FREQ[i, j, k, 2] = 2/dy * cos(x1[i]*2*pi/2) * sin(x2[j]*2*pi/2) * cos(x3[k]*2*pi/2)
+                FREQ[i, j, k, 3] = 2/dz * cos(x1[i]*2*pi/2) * cos(x2[j]*2*pi/2) * sin(x3[k]*2*pi/2)
                 # FREQ[i,j,k,1] = U1
                 # FREQ[i,j,k,2] = U2
                 # FREQ[i,j,k,3] = U3

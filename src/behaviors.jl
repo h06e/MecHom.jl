@@ -325,6 +325,19 @@ end
 
 
 
+function compute_sig(eps::Vector{T}, mat::IE) where {T<:Union{Float64,ComplexF64}}
+    tre = eps[1] + eps[2] + eps[3]
+    sig = [
+        2*mat.mu* eps[1] + mat.lambda * tre,
+        2*mat.mu* eps[2] + mat.lambda * tre,
+        2*mat.mu* eps[3] + mat.lambda * tre,
+        2*mat.mu* eps[4],
+        2*mat.mu* eps[5],
+        2*mat.mu* eps[6],
+    ]
+    return sig
+end
+
 
 function compute_eps(sig::Vector{T}, mat::IE) where {T<:Union{Float64,ComplexF64}}
     trs = sig[1] + sig[2] + sig[3]

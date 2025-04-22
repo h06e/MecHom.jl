@@ -352,6 +352,76 @@ function polarization_step_solver_gpu!(r, eps, sig, EPS, SIG, phases_gpu, materi
             return it, err_equi, 0.0, err_load
         end
     elseif loading_type == Stress
+
+        alpha = 2.0
+        beta = 2.0
+
+        c0_list = [IE2ITE(c0) |> cu for m in material_list] |> cu
+        cpc0 = [(m + c0) |> cu for m in material_list] |> cu
+
+        sa = CUDA.zeros(FT, size(eps)...)
+        sb = CUDA.zeros(FT, size(eps)...)
+        
+        add_mean_value!(eps, loading .- EPS, cartesian)
+
+        n_blocks, n_threads = get_blocks_threads(NNN)
+        @cuda blocks = n_blocks threads = n_threads rdcgpu!(sig, eps, phases_gpu, material_list_gpu, cartesian, NNN)
+
+        tol_equi = tols[1]
+        tol_load = tols[3]
+        err_equi = 1e9
+        err_load = 1e9
+        it = 0
+
+        while (err_equi > tol_equi || err_load > tol_load) && it < Nit_max
+            it += 1
+
+            @cuda blocks = n_blocks threads = n_threads rdcgpu!(sa, eps, phases_gpu, c0_list,cartesian, NNN)
+
+
+            CUDA.@. sb = alpha * sig - beta * sa
+            CUDA.@. sa = sig + (1 - beta) * sa
+
+            gamma0!(P, Pinv, xi1, xi2, xi3, tau, sb, c0, [0.0, 0.0, 0.0, 0.0, 0.0, 0.0], freq_mod)
+
+            
+            @cuda blocks = n_blocks threads = n_threads rdcgpu!(sig, sb, phases_gpu, c0_list,cartesian, NNN)
+            
+            CUDA.@. sig += sa
+            
+            add_mean_value!(sig, compute_sig(beta * EPS, c0) - alpha * (SIG - loading), cartesian)
+
+            @cuda blocks = n_blocks threads = n_threads rdcinvgpu!(sa, sig, phases_gpu, cpc0,cartesian, NNN)
+
+            CUDA.@. sb = eps - sa
+
+            err_equi = Float64(eq_error(r, sb, cartesian))
+
+            CUDA.@. eps = sa
+
+            @cuda blocks = n_blocks threads = n_threads rdcgpu!(sig, eps, phases_gpu, material_list_gpu,cartesian, NNN)
+
+            EPS .= meanfield(eps)
+            SIG .= meanfield(sig)
+
+
+            err_load = Float64(abs(sum((SIG .- loading) .^ 2 .* [1.0, 1.0, 1.0, 2.0, 2.0, 2.0])))
+
+
+            isnothing(fft_hist) ? nothing : (update_hist!(fft_hist, it, E=EPS, S=SIG, equi=err_equi, load=err_load))
+            verbose_fft ? print_iteration(it, EPS, SIG, err_equi, 0.0, err_load, tols) : nothing
+        end
+        if isnan(err_equi)
+            throw(ErrorException("err_equi is NaN – check algorithm stability or parameter choices (e.g., c0)."))
+        else
+            return it, err_equi, 0.0, err_load
+        end
+
+
+
+
+
+
         @error "Polarization & Stress control is not implemented in MecHom yet."
         return
     end
