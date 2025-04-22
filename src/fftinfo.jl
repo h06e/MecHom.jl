@@ -54,10 +54,12 @@ function init_gpu_realfft(::Type{T},eps, p, phases) where {T<:AbstractFloat}
     P = CUDA.CUFFT.plan_rfft(eps, (1, 2, 3))
     Pinv = CUDA.CUFFT.plan_irfft(tau, N[1], (1, 2, 3))
 
-    xi1 = CUDA.CUFFT.rfftfreq(N[1], 1 / p[1])
-    xi2 = CUDA.CUFFT.fftfreq(N[2], 1 / p[2])
-    xi3 = CUDA.CUFFT.fftfreq(N[3], 1 / p[3])
-
+    xi1 = CUDA.zeros(div(N[1], 2) + 1)
+    xi2 = CUDA.zeros(N[2])
+    xi3 = CUDA.zeros(N[3])
+    xi1 .= CUDA.CUFFT.rfftfreq(N[1], 1 / p[1])
+    xi2 .= CUDA.CUFFT.fftfreq(N[2], 1 / p[2])
+    xi3 .= CUDA.CUFFT.fftfreq(N[3], 1 / p[3])
 
     return P, Pinv, xi1, xi2, xi3, tau
 end
@@ -71,9 +73,12 @@ function init_gpu_complexfft(::Type{T},eps, p, phases) where {T}
     P = CUDA.CUFFT.plan_fft(eps, (1, 2, 3))
     Pinv = CUDA.CUFFT.plan_ifft(tau, (1, 2, 3))
 
-    xi1 = CUDA.CUFFT.fftfreq(N[1], 1 / p[1])
-    xi2 = CUDA.CUFFT.fftfreq(N[2], 1 / p[2])
-    xi3 = CUDA.CUFFT.fftfreq(N[3], 1 / p[3])
+    xi1 = CUDA.zeros(N[1])
+    xi2 = CUDA.zeros(N[2])
+    xi3 = CUDA.zeros(N[3])
+    xi1 .= CUDA.CUFFT.fftfreq(N[1], 1 / p[1])
+    xi2 .= CUDA.CUFFT.fftfreq(N[2], 1 / p[2])
+    xi3 .= CUDA.CUFFT.fftfreq(N[3], 1 / p[3])
 
     return P, Pinv, xi1, xi2, xi3, tau
 end
@@ -115,9 +120,9 @@ function modified_frequencied(::Type{T}, p, phases) where {T}
                     FREQ[i, j, k, 2] = (N[2] / (ros2 * T2)) * cos(ros2 * U1 * T1 / N[1]) * sin(ros2 * U2 * T2 / N[2]) * cos(ros2 * U3 * T3 / N[3])
                     FREQ[i, j, k, 3] = (N[3] / (ros2 * T3)) * cos(ros2 * U1 * T1 / N[1]) * cos(ros2 * U2 * T2 / N[2]) * sin(ros2 * U3 * T3 / N[3])
 
-                    # FREQ[i, j, k, 1] = 2/dx * sin(x1[i]*2*pi/2) * cos(x2[j]*2*pi/2) * cos(x3[k]*2*pi/2)
-                    # FREQ[i, j, k, 2] = 2/dy * cos(x1[i]*2*pi/2) * sin(x2[j]*2*pi/2) * cos(x3[k]*2*pi/2)
-                    # FREQ[i, j, k, 3] = 2/dz * cos(x1[i]*2*pi/2) * cos(x2[j]*2*pi/2) * sin(x3[k]*2*pi/2)
+                    FREQ[i, j, k, 1] = 2/dx * sin(x1[i]*2*pi/2) * cos(x2[j]*2*pi/2) * cos(x3[k]*2*pi/2)
+                    FREQ[i, j, k, 2] = 2/dy * cos(x1[i]*2*pi/2) * sin(x2[j]*2*pi/2) * cos(x3[k]*2*pi/2)
+                    FREQ[i, j, k, 3] = 2/dz * cos(x1[i]*2*pi/2) * cos(x2[j]*2*pi/2) * sin(x3[k]*2*pi/2)
                     # FREQ[i,j,k,1] = U1
                     # FREQ[i,j,k,2] = U2
                     # FREQ[i,j,k,3] = U3

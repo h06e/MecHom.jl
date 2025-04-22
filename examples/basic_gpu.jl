@@ -33,7 +33,7 @@ function main()
     # N1, N2, N3 = 128, 128, 128
     # micro = generate_micro(N1, N2, N3)
 
-    info, micro = MecHom.Micro.gen_2d_random_disks(2, 0.5, 0.2, 128; seed=123)
+    info, micro = MecHom.Micro.gen_2d_random_disks(30, 0.5, 0.2, 1024; seed=123)
 
     loading_list = [[1.0,0.,0.,0.,0.,0.]]
     time_list = [Float64(i) for i in eachindex(loading_list)]
@@ -71,7 +71,26 @@ function main()
     #     # c0=:ITE2DStrain
     # )
 
-    # solgpu = solverGPU(
+    solgpu = solverGPU(
+        micro,
+        material_list,
+        Stress,
+        loading_list,
+        time_list,
+        tols;
+        verbose_fft=true,
+        verbose_step=true,
+        Nit_max=500,
+        precision=:simple,
+        green_willot=false,
+        # scheme=Polarization,
+        keep_fields=true,
+        keep_it_info=true,
+        c0=:ITE2DStrain
+        # c0=IE(kappa=70.0, mu=30.0)
+    )
+
+    # solgpu2 = solverGPU(
     #     micro,
     #     material_list,
     #     Strain,
@@ -83,35 +102,11 @@ function main()
     #     Nit_max=500,
     #     precision=:simple,
     #     green_willot=false,
-    #     # scheme=Polarization,
     #     keep_fields=true,
-    #     keep_it_info=true
+    #     keep_it_info=true,
+    #     # scheme=Polarization,
+    #     c0=IE(kappa=70.0, mu=30.0)
     # )
-
-    matrix = material_list[1]
-    fibre = material_list[2]
-
-    @info "" fibre.k fibre.p fibre.m
-    @info "" matrix.kappa matrix.mu
-
-    @info "c0?" 0.5*(fibre.k+matrix.kappa) 0.5*(matrix.mu+fibre.p)
-
-    solgpu2 = solverGPU(
-        micro,
-        material_list,
-        Stress,
-        loading_list,
-        time_list,
-        tols;
-        verbose_fft=false,
-        verbose_step=true,
-        Nit_max=500,
-        precision=:simple,
-        green_willot=true,
-        keep_fields=true,
-        keep_it_info=true,
-        c0=IE(kappa=100.0, mu=30.0)
-    )
 
     # pygui(true)
     # plt.figure()

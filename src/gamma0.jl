@@ -339,12 +339,12 @@ function gamma0ITE_kernel!(tau,ntau, xi1, xi2, xi3, N, α, αp, β, γ, γp, car
             fu3 = 1.0im * (N13 * divt1 + N23 * divt2 + N33 * divt3) / D
 
 
-            tau[i1, i2, i3, 1] = 1.0im * xi1 * fu1
-            tau[i1, i2, i3, 2] = 1.0im * xi2 * fu2
-            tau[i1, i2, i3, 3] = 1.0im * xi3 * fu3
-            tau[i1, i2, i3, 4] = 1.0im * 0.5 * (xi2 * fu3 + xi3 * fu2)
-            tau[i1, i2, i3, 5] = 1.0im * 0.5 * (xi1 * fu3 + xi3 * fu1)
-            tau[i1, i2, i3, 6] = 1.0im * 0.5 * (xi1 * fu2 + xi2 * fu1)
+            tau[i1, i2, i3, 1] = 1.0im * xi1[i1] * fu1
+            tau[i1, i2, i3, 2] = 1.0im * xi2[i2] * fu2
+            tau[i1, i2, i3, 3] = 1.0im * xi3[i3] * fu3
+            tau[i1, i2, i3, 4] = 1.0im * 0.5 * (xi2[i2] * fu3 + xi3[i3] * fu2)
+            tau[i1, i2, i3, 5] = 1.0im * 0.5 * (xi1[i1] * fu3 + xi3[i3] * fu1)
+            tau[i1, i2, i3, 6] = 1.0im * 0.5 * (xi1[i1] * fu2 + xi2[i2] * fu1)
 
         end
 
@@ -371,11 +371,17 @@ function gamma0!(P, Pinv, xi1, xi2, xi3, tau, sig, c0, mean, freq_mod)
             mu0 = c0.mu
             @cuda blocks = n_blocks threads = n_threads gamma0IE_kernel!(tau, ntau,xi1, xi2, xi3, N, coef5, mu0, cartesian)
         elseif c0 isa ITE
-            α = c0.k + c0.m
-            αp = c0.m
-            β = c0.n
-            γ = c0.p
-            γp = c0.p + c0.l
+            α = Float32(c0.k + c0.m)
+            αp = Float32(c0.m)
+            β = Float32(c0.n)
+            γ = Float32(c0.p)
+            γp = Float32(c0.p + c0.l)
+            
+            # @info "" α, αp, β, γ, γp
+            # @warn c0.p
+            # @warn c0.l
+            # @warn size(tau) size(xi1) size(xi2) size(xi3)
+            # @info "" reduce(+,tau)
             @cuda blocks = n_blocks threads = n_threads gamma0ITE_kernel!(tau,ntau, xi1, xi2, xi3, N, α, αp, β, γ, γp, cartesian)
         end
     else
@@ -384,6 +390,67 @@ function gamma0!(P, Pinv, xi1, xi2, xi3, tau, sig, c0, mean, freq_mod)
 
         @cuda blocks = n_blocks threads = n_threads gamma0IE_willot_kernel!(tau, ntau, freq_mod, N, coef5, mu0, cartesian)
     end
+
+    # tauc = Array(tau)
+    # xi1c = Array(xi1)
+    # xi2c = Array(xi2)
+    # xi3c = Array(xi3)
+
+    # α = Float32(c0.k + c0.m)
+    # αp = Float32(c0.m)
+    # β = Float32(c0.n)
+    # γ = Float32(c0.p)
+    # γp = Float32(c0.p + c0.l)
+    # for i in eachindex(tauc[:,:,:,1])
+
+    #     i1 = cartesian[i][1]
+    #     i2 = cartesian[i][2]
+    #     i3 = cartesian[i][3]
+
+    #     divt1 = xi1c[i1] * tauc[i1, i2, i3, 1] + xi2c[i2] * tauc[i1, i2, i3, 6] + xi3c[i3] * tauc[i1, i2, i3, 5]
+    #     divt2 = xi1c[i1] * tauc[i1, i2, i3, 6] + xi2c[i2] * tauc[i1, i2, i3, 2] + xi3c[i3] * tauc[i1, i2, i3, 4]
+    #     divt3 = xi1c[i1] * tauc[i1, i2, i3, 5] + xi2c[i2] * tauc[i1, i2, i3, 4] + xi3c[i3] * tauc[i1, i2, i3, 3]
+
+    #     η2 = xi1c[i1] * xi1c[i1] + xi2c[i2] * xi2c[i2]
+    #     ξ12 = xi1c[i1] * xi1c[i1]
+    #     ξ22 = xi2c[i2] * xi2c[i2]
+    #     ξ32 = xi3c[i3] * xi3c[i3]
+
+    #     D = (αp * η2 + γ * ξ32) *
+    #             (α * γ * η2 * η2 + (α * β + γ * γ - γp * γp) * η2 * ξ32 + β * γ * ξ32 * ξ32)
+
+
+    #     N11 = (αp * ξ12 + α * ξ22 + γ * ξ32) *
+    #                 (γ * η2 + β * ξ32) - γp * γp * ξ22 * ξ32
+    #     N12 = γp * γp * xi1c[i1] * xi2c[i2] * ξ32 - (α - αp) * xi1c[i1] * xi2c[i2] * (γ * η2 + β * ξ32)
+    #     N13 = (α - αp) * γp * xi1c[i1] * ξ22 * xi3c[i3] - γp * xi1c[i1] * xi3c[i3] * (αp * ξ12 + α * ξ22 + γ * ξ32)
+
+    #     N22 = (α * ξ12 + αp * ξ22 + γ * ξ32) * (γ * η2 + β * ξ32) - γp * γp * ξ12 * ξ32
+    #     N23 = (α - αp) * γp * ξ12 * xi2c[i2] * xi3c[i3] - γp * xi2c[i2] * xi3c[i3] * (α * ξ12 + αp * ξ22 + γ * ξ32)
+
+    #     N33 = (α * ξ12 + αp * ξ22 + γ * ξ32) *
+    #                 (αp * ξ12 + α * ξ22 + γ * ξ32) - (α - αp) * (α - αp) * ξ12 * ξ22
+
+    #     fu1 = 1.0im * (N11 * divt1 + N12 * divt2 + N13 * divt3) / D
+    #     fu2 = 1.0im * (N12 * divt1 + N22 * divt2 + N23 * divt3) / D
+    #     fu3 = 1.0im * (N13 * divt1 + N23 * divt2 + N33 * divt3) / D
+
+    #     tau1 = 1.0im * xi1c[i1] * fu1
+    #     tau2 = 1.0im * xi2c[i2] * fu2
+    #     tau3 = 1.0im * xi3c[i3] * fu3
+    #     tau4 = 1.0im * 0.5 * (xi2c[i2] * fu3 + xi3c[i3] * fu2)
+    #     tau5 = 1.0im * 0.5 * (xi1c[i1] * fu3 + xi3c[i3] * fu1)
+    #     tau6 = 1.0im * 0.5 * (xi1c[i1] * fu2 + xi2c[i2] * fu1)
+
+    #     if isnan(tau1)
+    #         @warn CartesianIndices(size(tauc))[i] fu1 D η2 ξ12 ξ22 ξ32 α αp β γ γp
+    #         @warn "" (α * β + γ * γ - γp * γp)
+    #     end
+
+    #     # if isnan(tauc[i])
+    #     #     @warn CartesianIndices(size(tauc))[i]
+    #     # end
+    # end
 
     CUDA.@allowscalar tau[1, 1, 1, 1] = mean[1] * NNN
     CUDA.@allowscalar tau[1, 1, 1, 2] = mean[2] * NNN

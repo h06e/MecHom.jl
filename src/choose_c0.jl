@@ -58,9 +58,10 @@ function chose_c0(material_list::Vector{<:Material},method::Symbol)
         end
         m0 = 0.5 * 0.5 * (v1_min + v1_max)
         p0 = 0.5 * 0.5 * (v2_min + v2_max)
-        l0 = 1e20
+        l0 = 0.
         k0 = 0.5 * 0.5 * (v3_min + v3_max)
         n0 = 0.5 * (v4_min + v4_max)
+
         return ITE(k = k0, l = l0, m = m0, n = n0, p = p0)
 
     elseif method == :iso_arit_lambda0
