@@ -106,7 +106,7 @@ function add_sphere!(img,cx,cy,r)
         for j in ym:yM
             d2=(i/Np-cx)^2+(j/Np-cy)^2
             if d2 <= (r^2)
-                @inbounds img[i,j] = 2
+                @inbounds img[i,j] = 1
             end
         end
     end
