@@ -338,7 +338,7 @@ function compute_sig(eps::Vector{T}, mat::IE) where {T<:Union{Float64,ComplexF64
     return sig
 end
 
-function compute_sig(eps::Vector{T}, mat::ITE) where {T<:Union{Float64,ComplexF64}}
+function compute_sig(eps::Vector{T}, mat::ITE{Float64}) where {T<:Union{Float64,ComplexF64}}
     sig = [
         (mat.k + mat.mu) * eps[1] + (mat.k - mat.mu) * eps[2] + (mat.l) * eps[3],
         (mat.k - mat.mu) * eps[1] + (mat.k + mat.mu) * eps[2] + (mat.l) * eps[3],
