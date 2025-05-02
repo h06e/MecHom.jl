@@ -26,7 +26,7 @@ function costfunc_c0(x,material_list)
     for m in material_list
         C = getmat(m)
         δC = C-C0
-        s= max(s,normF( inv(C0) * δC ))
+        s= max(s,svd(inv(C0) * δC).S[1])
     end
     return s
 end
@@ -55,7 +55,7 @@ function chose_c0(material_list::Vector{<:Material},scheme::Type{<:Scheme})
         end
     else
         if material_list isa Vector{<:IE}
-            @error "No supported choice for c0 with Polarization scheme for now"
+            return chose_c0(material_list, :iso_geom_lambda0)
         elseif material_list isa Vector{<:Elastic}
             return chose_c0(material_list, :iso_geom_lambda0)
         end

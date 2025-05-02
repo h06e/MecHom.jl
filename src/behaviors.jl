@@ -151,7 +151,7 @@ end
 function convert_to_complex_ITE(mat::ITE)
     return ITE(k=Complex(mat.k), l=Complex(mat.l), m=Complex(mat.m), n=Complex(mat.n), p=Complex(mat.p))
 end
-    
+
 
 
 #************************************************************************************
@@ -180,12 +180,12 @@ struct GE{T<:Union{Float64,ComplexF64}} <: Elastic
 end
 
 
-function GE(mat::IE{T}) where T
+function GE(mat::IE{T}) where {T}
     return GE{T}(1, mat.kappa, mat.mu, mat.E, mat.nu, mat.lambda,
         NaN, NaN, NaN, NaN, NaN, NaN, NaN, NaN, NaN, NaN, NaN,)
 end
 
-function GE(mat::ITE{T}) where T
+function GE(mat::ITE{T}) where {T}
     return GE{T}(2, NaN, NaN, NaN, NaN, NaN,
         mat.k, mat.l, mat.m, mat.n, mat.p, mat.El, mat.Et, mat.nul, mat.nut, mat.mul, mat.mut)
 end
@@ -328,15 +328,28 @@ end
 function compute_sig(eps::Vector{T}, mat::IE) where {T<:Union{Float64,ComplexF64}}
     tre = eps[1] + eps[2] + eps[3]
     sig = [
-        2*mat.mu* eps[1] + mat.lambda * tre,
-        2*mat.mu* eps[2] + mat.lambda * tre,
-        2*mat.mu* eps[3] + mat.lambda * tre,
-        2*mat.mu* eps[4],
-        2*mat.mu* eps[5],
-        2*mat.mu* eps[6],
+        2 * mat.mu * eps[1] + mat.lambda * tre,
+        2 * mat.mu * eps[2] + mat.lambda * tre,
+        2 * mat.mu * eps[3] + mat.lambda * tre,
+        2 * mat.mu * eps[4],
+        2 * mat.mu * eps[5],
+        2 * mat.mu * eps[6],
     ]
     return sig
 end
+
+function compute_sig(eps::Vector{T}, mat::ITE) where {T<:Union{Float64,ComplexF64}}
+    sig = [
+        (mat.k + mat.mu) * eps[1] + (mat.k - mat.mu) * eps[2] + (mat.l) * eps[3],
+        (mat.k - mat.mu) * eps[1] + (mat.k + mat.mu) * eps[2] + (mat.l) * eps[3],
+        (mat.l) * eps[1] + (mat.l) * eps[2] + (mat.n) * eps[3],
+        2 * mat.p * eps[4],
+        2 * mat.p * eps[5],
+        2 * mat.m * eps[6],
+    ]
+    return sig
+end
+
 
 
 function compute_eps(sig::Vector{T}, mat::IE) where {T<:Union{Float64,ComplexF64}}
@@ -391,12 +404,12 @@ function rdcgpu!(sig, eps, phases, material_list, cartesian, NNN)
 
         mat = material_list[phases[i]]
 
-        sig[i1,i2,i3,1] = (mat.k + mat.m) * eps[i1,i2,i3,1] + (mat.k - mat.m) * eps[i1,i2,i3,2] + mat.l * eps[i1,i2,i3,3]
-        sig[i1,i2,i3,2] = (mat.k - mat.m) * eps[i1,i2,i3,1] + (mat.k + mat.m) * eps[i1,i2,i3,2] + mat.l * eps[i1,i2,i3,3]
-        sig[i1,i2,i3,3] = mat.l * eps[i1,i2,i3,1] + mat.l * eps[i1,i2,i3,2] + mat.n * eps[i1,i2,i3,3]
-        sig[i1,i2,i3,4] = 2 * mat.p * eps[i1,i2,i3,4]
-        sig[i1,i2,i3,5] = 2 * mat.p * eps[i1,i2,i3,5]
-        sig[i1,i2,i3,6] = 2 * mat.m * eps[i1,i2,i3,6]
+        sig[i1, i2, i3, 1] = (mat.k + mat.m) * eps[i1, i2, i3, 1] + (mat.k - mat.m) * eps[i1, i2, i3, 2] + mat.l * eps[i1, i2, i3, 3]
+        sig[i1, i2, i3, 2] = (mat.k - mat.m) * eps[i1, i2, i3, 1] + (mat.k + mat.m) * eps[i1, i2, i3, 2] + mat.l * eps[i1, i2, i3, 3]
+        sig[i1, i2, i3, 3] = mat.l * eps[i1, i2, i3, 1] + mat.l * eps[i1, i2, i3, 2] + mat.n * eps[i1, i2, i3, 3]
+        sig[i1, i2, i3, 4] = 2 * mat.p * eps[i1, i2, i3, 4]
+        sig[i1, i2, i3, 5] = 2 * mat.p * eps[i1, i2, i3, 5]
+        sig[i1, i2, i3, 6] = 2 * mat.m * eps[i1, i2, i3, 6]
 
     end
     return nothing
@@ -420,12 +433,12 @@ function rdcinvgpu!(eps, sig, phases, material_list, cartesian, NNN)
         s44 = 1.0 / 2.0 / mat.mul
         s66 = 1.0 / 2.0 / mat.mut
 
-        eps[i1,i2,i3,1] = s11 * sig[i1,i2,i3,1] + s12 * sig[i1,i2,i3,2] + s13 * sig[i1,i2,i3,3]
-        eps[i1,i2,i3,2] = s12 * sig[i1,i2,i3,1] + s11 * sig[i1,i2,i3,2] + s13 * sig[i1,i2,i3,3]
-        eps[i1,i2,i3,3] = s13 * sig[i1,i2,i3,1] + s13 * sig[i1,i2,i3,2] + s33 * sig[i1,i2,i3,3]
-        eps[i1,i2,i3,4] = s44 * sig[i1,i2,i3,4]
-        eps[i1,i2,i3,5] = s44 * sig[i1,i2,i3,5]
-        eps[i1,i2,i3,6] = s66 * sig[i1,i2,i3,6]
+        eps[i1, i2, i3, 1] = s11 * sig[i1, i2, i3, 1] + s12 * sig[i1, i2, i3, 2] + s13 * sig[i1, i2, i3, 3]
+        eps[i1, i2, i3, 2] = s12 * sig[i1, i2, i3, 1] + s11 * sig[i1, i2, i3, 2] + s13 * sig[i1, i2, i3, 3]
+        eps[i1, i2, i3, 3] = s13 * sig[i1, i2, i3, 1] + s13 * sig[i1, i2, i3, 2] + s33 * sig[i1, i2, i3, 3]
+        eps[i1, i2, i3, 4] = s44 * sig[i1, i2, i3, 4]
+        eps[i1, i2, i3, 5] = s44 * sig[i1, i2, i3, 5]
+        eps[i1, i2, i3, 6] = s66 * sig[i1, i2, i3, 6]
     end
     return nothing
 end
