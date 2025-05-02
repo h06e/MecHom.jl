@@ -1,7 +1,53 @@
+using Optim
+using LinearAlgebra
+
 export chose_c0
+
+
+function normF(m::Matrix)
+    return sum(m.^2)
+end
+
+function getmat(mat)
+    m = MecHom.IE2ITE(mat)
+    return [[m.k+m.m m.k-m.m m.l 0. 0. 0.];
+    [m.k-m.m m.k+m.m m.l 0. 0. 0.];
+    [m.l m.l m.n 0. 0. 0.];
+    [0. 0. 0. 2*m.p 0. 0.];
+    [0. 0. 0. 0. 2*m.p 0.];
+    [0. 0. 0. 0. 0. 2*m.m]]
+
+end
+
+function costfunc_c0(x,material_list)
+    C0 = getmat(ITE(k=x[1], l=x[2], m=x[3], n=x[4], p=x[5]))
+
+    s=0.
+    for m in material_list
+        C = getmat(m)
+        δC = C-C0
+        s= max(s,normF( inv(C0) * δC ))
+    end
+    return s
+end
+
+
+function mat2x(mat)
+    m = MecHom.IE2ITE(mat)
+    return [m.k, m.l, m.m, m.n, m.p]
+end
+
 
 function chose_c0(material_list::Vector{<:Material},scheme::Type{<:Scheme})
     if scheme == FixedPoint
+
+        # Chose c0 that minimize max_Ω ( C₀⁻¹δC )
+        x0 = mat2x(material_list[1])
+        result = optimize(x -> cost0(x, material_list), x0, NelderMead())
+        x=Optim.minimizer(result)
+        return ITE(k=x[1], l=x[2], m=x[3], n=x[4], p=x[5])
+
+
         if material_list isa Vector{<:IE}
             return chose_c0(material_list, :iso_arit_kappa_mu)
         elseif material_list isa Vector{<:Elastic}
@@ -16,6 +62,9 @@ function chose_c0(material_list::Vector{<:Material},scheme::Type{<:Scheme})
 
     end
 end
+
+
+# ------------------------------------
 
 
 function chose_c0(material_list::Vector{<:Material},method::Symbol)
