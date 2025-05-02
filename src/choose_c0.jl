@@ -19,6 +19,20 @@ function getmat(mat)
 
 end
 
+#! costfunc_c0 pour schema en polarisation
+# function cost3(x,param)
+#     C0 = getmat(ITE(k=x[1], l=x[2], m=x[3], n=x[4], p=x[5]))
+
+#     s=0.
+#     for i in [:matrix,:fibre]
+#         C = getmat(param[i])
+#         δC = C-C0
+#         s= max(s,svd(inv(δC) * C).S[1])
+#         s= max(s,svd(inv(δC) * C0).S[1])
+#     end
+#     return s
+# end
+
 function costfunc_c0(x,material_list)
     C0 = getmat(ITE(k=x[1], l=x[2], m=x[3], n=x[4], p=x[5]))
 
