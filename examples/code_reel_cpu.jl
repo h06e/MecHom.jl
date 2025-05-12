@@ -230,7 +230,7 @@ function main()
 
     N = 128
     N1, N2, N3 = N, N, N
-    N1, N2, N3 = 1024, 1024, 1
+    # N1, N2, N3 = 1024, 1024, 1
     phases = generate_micro(N1, N2, N3)
 
     E = [1.0, 0.0, 0.0, 0.0, 0.0, 0.0]

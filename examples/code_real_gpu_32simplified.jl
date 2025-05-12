@@ -259,9 +259,9 @@ function main()
     material_list = [IE(1.0, 1.0), IE(1e3, 1e3)]
     c0 = chose_c0(material_list)
 
-    N = 64
+    N = 128
     N1, N2, N3 = N, N, N
-    N1, N2, N3 = 1024, 1024, 1
+    # N1, N2, N3 = 1024, 1024, 1
     NNN = N1 * N2 * N3
     phases = generate_micro(N1, N2, N3)
 
@@ -331,7 +331,7 @@ function main()
             end
 
 
-            # println("$it $err $EPS $SIG ")
+            println("$it $err $EPS $SIG ")
 
             chrono_tfft1 += tfft1
             chrono_tgammafft += tgammafft

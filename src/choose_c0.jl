@@ -57,7 +57,7 @@ function chose_c0(material_list::Vector{<:Material},scheme::Type{<:Scheme})
 
         # Chose c0 that minimize max_Ω ( C₀⁻¹δC )
         x0 = mat2x(material_list[1])
-        result = optimize(x -> cost0(x, material_list), x0, NelderMead())
+        result = optimize(x -> costfunc_c0(x, material_list), x0, NelderMead())
         x=Optim.minimizer(result)
         return ITE(k=x[1], l=x[2], m=x[3], n=x[4], p=x[5])
 
